@@ -1,0 +1,34 @@
+#!/bin/bash
+# log-archive: compress a log directory into a tar.gz and record when it happened
+
+set -euo pipefail
+
+# 1. Check the argument
+if [ $# -ne 1 ]; then
+  echo "Usage: log-archive <log-directory>"
+  exit 1
+fi
+
+LOG_DIR="$1"
+
+if [ ! -d "$LOG_DIR" ]; then
+  echo "Error: '$LOG_DIR' is not a directory"
+  exit 1
+fi
+
+# 2. Where archives are stored (can be overridden: ARCHIVE_DIR=/tmp/x log-archive ...)
+ARCHIVE_DIR="${ARCHIVE_DIR:-/var/log-archive}"
+mkdir -p "$ARCHIVE_DIR"
+
+# 3. Build the file name with date and time
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+ARCHIVE_FILE="$ARCHIVE_DIR/logs_archive_${TIMESTAMP}.tar.gz"
+
+# 4. Compress
+tar -czf "$ARCHIVE_FILE" -C "$LOG_DIR" .
+
+# 5. Record date and time in a log file
+SIZE=$(du -h "$ARCHIVE_FILE" | cut -f1)
+echo "$(date '+%Y-%m-%d %H:%M:%S') | $LOG_DIR -> $ARCHIVE_FILE ($SIZE)" >> "$ARCHIVE_DIR/archive.log"
+
+echo "Archive created: $ARCHIVE_FILE ($SIZE)"
